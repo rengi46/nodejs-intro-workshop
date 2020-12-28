@@ -16,6 +16,9 @@ In this workshop you will learn how to build backend apps with Node.js.
 - [How Modules are Loaded](#how-modules-are-loaded)
 - [Paths in Node.js](#paths-in-nodejs)
 - [File System in Node.js](#file-system-in-nodejs)
+- [Callbacks and Promises](#callbacks-and-promises)
+- [Error Handling](#error-handling)
+- [Debugging Node.js Apps](#debugging-nodejs-apps)
 
 ## Getting Started
 
@@ -330,7 +333,7 @@ console.log(
 // -> ../../exercises/02-exercise/02-exercise.js
 ```
 
-### Relative Paths
+### Dynamic Paths
 
 If our script is executed with a dynamic file path we can use `__dirname` and the path module to build the path to the file in our hard drive. The `__dirname` in a node script returns the path of the folder where the current JavaScript file is located.
 
@@ -444,6 +447,338 @@ $ npm run test:ex:02
 ```
 
 For this part you have 15 minutes to solve it. If you get stuck you can find the solution inside the `02-exercise-solution` branch. Once the time has passed the instructor will solve the exercise.
+
+## Callbacks and Promises
+
+### Asynchronous Programming in Node.js
+
+JavaScript is a programming language where everything could run on an asynchronous way. However, most of the built-in modules of Node.js also have a synchronous version but you should always try to avoid them because this way you would not block the main thread.
+
+### Synchronous Callbacks
+
+Callback functions can be synchronous or asynchronous. Since Asynchronous callback functions may be more complex, here is a simple example of a synchronous callback function.
+
+```js
+// a function that uses a callback
+// named `cb` as a parameter
+function getSyncMessage(cb) {
+  cb("Hello World!");
+}
+
+console.log("Before getSyncMessage call");
+
+// calling a function and sending in
+// a callback function as an argument
+getSyncMessage(function (message) {
+  console.log(message);
+});
+
+console.log("After getSyncMessage call");
+```
+
+```bash
+$ node sync-cb.js
+Before getSyncMessage call
+Hello World!
+After getSyncMessage call
+```
+
+### Asynchronous Callbacks
+
+By default, JavaScript is synchronous, but there are APIs in the environment (browser, Node.js, etc.) that could make it behave asynchronously so that the main thread is not blocked.
+
+Some common things that are asynchronous in JavaScript environments that accept callbacks:
+
+- Events
+- setTimeout
+- setInterval
+- the fetch API
+- Promises
+
+### Asynchronous Callbacks with `setTimeout`
+
+An example of an async function implemented with `setTimeout()`.
+
+```js
+// a function that uses a callback as a parameter
+function getAsyncMessage(cb) {
+  setTimeout(function () {
+    cb("Hello World!");
+  }, 1000);
+}
+
+console.log("Before getSyncMessage call");
+
+// calling a function with a callback as an argument.
+getAsyncMessage(function (message) {
+  console.log(message);
+});
+
+console.log("After getSyncMessage call");
+```
+
+```bash
+$ node async-setimeout.js
+Before getSyncMessage call
+After getSyncMessage call
+Hello World!
+```
+
+### Callback Hell
+
+As we have seen in an earlier example, using callbacks in Node.js can lead to a callback hell if we need to execute methods that depend on the previous results.
+
+```js
+fs.readFile("./files/hello.txt", "utf-8", function (err, data) {
+  if (err) throw err;
+
+  const newValue = data.replace(/world/, "mundo");
+
+  fs.writeFile("./files/hello.txt", newValue, "utf-8", function (err) {
+    if (err) throw err;
+
+    console.log("Done!");
+
+    fs.readFile("./files/hello.txt", "utf-8", function (err, data) {
+      if (err) throw err;
+
+      // Hello mundo!
+      console.log(data);
+    });
+  });
+});
+```
+
+### `fs` Promises API
+
+The `fs.promises` API provides an alternative set of asynchronous file system methods that return Promise objects rather than using callbacks.
+
+The API is accessible via `require('fs').promises` or `require('fs/promises')`.
+
+```js
+const fs = require("fs").promises;
+
+fs.readFile("hello.txt", "utf8")
+  .then(function (result) {
+    console.log("The contents of hello.txt", result);
+  })
+  .catch(function (e) {
+    console.log("Error reading file", e);
+  });
+```
+
+### Manually Promisifying a Callback
+
+Sometimes it might be necessary to manually promisify a callback function. This could be for a case where the callback does not follow the standard error-first format or if additional logic is needed to promisify:
+
+```js
+const fs = require("fs");
+
+function asyncReadFile(file, encoding) {
+  return new Promise((resolve, reject) => {
+    fs.readFile(file, encoding, (error, data) => {
+      if (error) reject(error);
+
+      resolve(data);
+    });
+  });
+}
+
+asyncReadFile("hello.txt", "utf8")
+  .then(function (result) {
+    console.log("The contents of hello.txt", result);
+  })
+  .catch(function (e) {
+    console.log("Error reading file", e);
+  });
+```
+
+## Error Handling
+
+Node.js has several ways to handle exceptions/errors:
+
+- try-catch block
+- error as the first argument to a callback
+- rejecting promises with an error
+
+### `try`/`catch`
+
+`try`/`catch` is used to catch the exceptions thrown from the synchronous code execution. If the caller (or the caller's caller, ...) used `try`/`catch`, then they can catch the error. If none of the callers had try-catch than the program crashes.
+
+```js
+function doSomeSynchronousOperation(req, res) {
+  if (req.body.username === "") {
+    throw new Error("User Name cannot be empty");
+  }
+  return true;
+}
+
+try {
+  // calling the method above
+  // this is synchronous code
+
+  // ⚠️ fails
+  doSomeSynchronousOperation(req, res);
+} catch (e) {
+  //exception handled here
+
+  // ⚠️ User Name cannot be empty
+  console.log(e.message);
+}
+```
+
+### `try`/`catch` With Async Code
+
+Errors must always be handled. If you are using synchronous programming you could use a try does not work if you work asynchronous!
+
+```js
+function readFile() {
+  throw new Error("File not found");
+}
+
+function loadData() {
+  setTimeout(function () {
+    readFile();
+  }, 100);
+}
+
+try {
+  // this won’t catch the error
+  loadData();
+} catch (error) {
+  console.error("error message" + error.message);
+}
+```
+
+### Catching Async Errors
+
+In order to fix the previous code, we need to catch the error inside the `setTimeout`.
+
+```js
+function readFile() {
+  throw new Error("File not found");
+}
+
+function loadData() {
+  setTimeout(function () {
+    // the error should be handled inside the callback
+    try {
+      readFile();
+    } catch (error) {
+      console.error("error message" + error.message);
+    }
+  }, 100);
+}
+
+loadData();
+```
+
+### Error First Callback
+
+The usual pattern is that the callback is invoked as a `callback(err, result)`, where only one of `err` and result is not `null`, depending on whether the operation succeeded or failed.
+
+```js
+function doSomeAsynchronousOperation(req, res, callback) {
+  setTimeout(function () {
+    return callback(new Error("User Name cannot be empty"));
+  }, 1000);
+
+  return true;
+}
+
+doSomeAsynchronousOperation(req, res, function (err, result) {
+  if (err) {
+    // exception handled here
+
+    // ⚠️ Fails when called without a username
+    console.log(err.message);
+  }
+
+  //do some stuff with valid data
+});
+```
+
+### Errors and Promises
+
+Promises handle errors differently to synchronous or callback-driven code. We should always try to catch errors when using Promises.
+
+```js
+const task = new Promise(function (resolve, reject) {
+  reject(new Error("Oops"));
+});
+
+// anything that is `rejected` inside a promise will be available
+// through .catch() when a promise is rejected,
+// `.then` will not be called
+task
+  .then(() => console.log("won't be called"))
+  .catch((e) => {
+    // output: Oops
+    console.log(e.message);
+  })
+  .then(() => {
+    // once the error is caught, execution flow resumes
+    console.log("hello!"); // output: hello!
+  });
+```
+
+### Unhandled Exception Management
+
+Because Node.js runs on a single process uncaught exceptions are an issue to be aware of when developing applications.
+
+#### `uncaughtException`
+
+```js
+process.on("uncaughtException", function (err) {
+  console.log(err.message);
+
+  process.exit(1);
+});
+
+function task() {
+  throw new Error("Something went wrong");
+}
+
+task();
+```
+
+#### `unhandledRejection`
+
+```js
+process.on("unhandledRejection", function (err) {
+  console.log(err.message);
+
+  process.exit(1);
+});
+
+function task() {
+  return Promise.reject(new Error("Something went wrong"));
+}
+
+task();
+```
+
+## Debugging Node.js Apps
+
+Although we can still use the `console` methods we know so far, a far more professional way of debugging Node.js applications is using the inspector.
+
+### Node.js Inspector Chrome DevTools integration
+
+The Node.js inspector can be executed in a way that it integrates with the Chrome DevTools for debugging. To enable it, you will need to run the following command:
+
+```bash
+node --inspect-brk filename.js
+```
+
+### Opening The Debugger In The Chrome Dev Tools
+
+In order to open the debugger in the Chrome Developer Tools you will need to open the following url in Chrome:
+
+```
+chrome://inspect
+```
+
+Then, you should see a link to the Node.js inspector.
 
 ## Author <!-- omit in toc -->
 
