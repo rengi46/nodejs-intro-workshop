@@ -14,6 +14,8 @@ In this workshop you will learn how to build backend apps with Node.js.
 - [nodemon](#nodemon)
 - [Modules in Node.js](#modules-in-nodejs)
 - [How Modules are Loaded](#how-modules-are-loaded)
+- [Paths in Node.js](#paths-in-nodejs)
+- [File System in Node.js](#file-system-in-nodejs)
 
 ## Getting Started
 
@@ -293,6 +295,155 @@ $ npm run test:ex:01
 ```
 
 For this part you have 15 minutes to solve it. If you get stuck you can find the solution inside the `01-exercise-solution` branch. Once the time has passed the instructor will solve the exercise.
+
+## Paths in Node.js
+
+### The `path` Module
+
+Since paths are built differently in UNIX and Windows systems, every time we work with a file that is not required by Node, we need to use the `path` module to find the path to the file with the correct format of your OS.
+
+### `path.join([...paths])`
+
+The `path.join()` method joins all given path segments together using the platform-specific separator as a delimiter, then normalizes the resulting path.
+
+```js
+const path = require("path");
+
+console.log(path.join("/foo", "bar", "baz/", "/quux"));
+// -> /foo/bar/baz/quux
+```
+
+### `path.relative(from, to)`
+
+The `path.relative()` method returns the relative path from `from` to `to` based on the current working directory. If `from` and `to` each resolve to the same path (after calling `path.resolve()` on each), a zero-length string is returned.
+
+```js
+const path = require("path");
+
+console.log(
+  path.relative(
+    "src/utils/paths.js",
+    "src/exercises/02-exercise/02-exercise.js",
+  ),
+);
+
+// -> ../../exercises/02-exercise/02-exercise.js
+```
+
+### Relative Paths
+
+If our script is executed with a dynamic file path we can use `__dirname` and the path module to build the path to the file in our hard drive. The `__dirname` in a node script returns the path of the folder where the current JavaScript file is located.
+
+```js
+const path = require("path");
+
+const FILE_PATH = path.resolve(__dirname, "hello.txt");
+
+console.log(__dirname);
+console.log(FILE_PATH);
+```
+
+```bash
+$ node app/fs-dirname.js
+/Users/dani/nodejs-intro-workshop/src/utils
+/Users/dani/nodejs-intro-workshop/src/utils/hello.txt
+```
+
+### File Name Path
+
+Another helpful built in variable we can use is `__filename`. This will give us the name of the current file so that we can build the path.
+
+```js
+console.log(__dirname);
+// => /Users/dani/nodejs-intro-workshop/src/utils
+console.log(__filename);
+// => /Users/dani/nodejs-intro-workshop/src/utils/paths.js
+```
+
+## File System in Node.js
+
+The `fs` module enables interacting with the file system in Node.js. All file system operations have synchronous, callback, and promise-based forms.
+
+### `fs.readFile(path[, options], callback)`
+
+Asynchronously reads the entire contents of a file.
+
+```js
+// /src/utils/fs.js
+const path = require("path");
+const fs = require("fs");
+
+const FILE_PATH = path.resolve(__dirname, "hello.txt");
+
+fs.readFile(FILE_PATH, { encoding: "utf-8" }, (err, data) => {
+  if (err) throw err;
+
+  console.log(data);
+  // => Elit velit dolore Lorem minim laborum enim.
+});
+```
+
+### `fs.writeFile(file, data[, options], callback)`
+
+Asynchronously writes data to the file, replacing the file if it already exists (data can be a string or a buffer).
+
+```js
+// /src/utils/fs.js
+const path = require("path");
+const fs = require("fs");
+
+const FILE_PATH = path.resolve(__dirname, "hello.txt");
+
+fs.writeFile(
+  FILE_PATH,
+  "Hello my friend\n",
+  { encoding: "utf-8" },
+  (writeErr) => {
+    if (writeErr) throw writeErr;
+
+    fs.readFile(FILE_PATH, { encoding: "utf-8" }, (readErr, data) => {
+      if (readErr) throw readErr;
+
+      console.log(data);
+      // => Hello my friend
+    });
+  },
+);
+```
+
+### `fs.appendFile(path, data[, options], callback)`
+
+Asynchronously append data to a file, creating the file if it does not yet exist (data can be a string or a Buffer).
+
+```js
+// /src/utils/fs.js
+const path = require("path");
+const fs = require("fs");
+
+const FILE_PATH = path.resolve(__dirname, "hello.txt");
+
+fs.appendFile(FILE_PATH, "¿Cómo estás?", { encoding: "utf-8" }, (writeErr) => {
+  if (writeErr) throw writeErr;
+
+  fs.readFile(FILE_PATH, { encoding: "utf-8" }, (readErr, data) => {
+    if (readErr) throw readErr;
+
+    console.log(data);
+    // => Hello my friend
+    // => ¿Cómo estás?
+  });
+});
+```
+
+### 02-exercise
+
+Open the `02-exercise.js` file inside the `src/exercises/02-exercise` folder and solve the exercise by following the instructions. Then, you can check if your solution is correct by running from the terminal the following command:
+
+```bash
+$ npm run test:ex:02
+```
+
+For this part you have 15 minutes to solve it. If you get stuck you can find the solution inside the `02-exercise-solution` branch. Once the time has passed the instructor will solve the exercise.
 
 ## Author <!-- omit in toc -->
 
