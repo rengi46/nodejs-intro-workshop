@@ -20,6 +20,7 @@ In this workshop you will learn how to build backend apps with Node.js.
 - [Error Handling](#error-handling)
 - [Debugging Node.js Apps](#debugging-nodejs-apps)
 - [Servers in Node.js](#servers-in-nodejs)
+- [Environment Variables](#environment-variables)
 
 ## Getting Started
 
@@ -946,6 +947,213 @@ $ npm run test:ex:03
 ```
 
 For this part you have 20 minutes to solve it. If you get stuck you can find the solution inside the `03-exercise-solution` branch. Once the time has passed the instructor will solve the exercise.
+
+## Environment Variables
+
+### Accessing Environment Variables
+
+The `process.env` property returns an object containing the user environment.
+
+It returns an object like this one:
+
+```js
+process.env = {
+  TERM: "xterm-256color",
+  SHELL: "/usr/local/bin/bash",
+  USER: "maciej",
+  PATH: "~/.bin/:/usr/sbin:/sbin:/usr/local/bin",
+  PWD: "/Users/maciej",
+  EDITOR: "vim",
+  SHLVL: "1",
+  HOME: "/Users/maciej",
+  LOGNAME: "maciej",
+  _: "/usr/local/bin/node",
+};
+```
+
+We can also set our own environment variables. For example, if you set environment variable `FOO` to `foobar`, it will be accessible with:
+
+```js
+process.env.FOO; // 'foobar'
+```
+
+### `NODE_ENV`
+
+A very common environment variable you will use is `process.env.NODE_ENV`.
+
+This environment variable is usually set by build tools such as webpack or jest so that we can see in which environment our code is executing so that we can perform some logic depending on whether our code is in production mode or development.
+
+```js
+process.env.NODE_ENV === "test";
+process.env.NODE_ENV === "development";
+process.env.NODE_ENV === "production";
+```
+
+### Setting `NODE_ENV="production"`
+
+Production deployments will vary in many ways, but a standard convention when deploying in production is to define an environment variable called `NODE_ENV` and set its value to `"production"`.
+
+```js
+// Any code running in your application
+// (including external modules)
+// can check the value of NODE_ENV:
+if (process.env.NODE_ENV === "production") {
+  // We are running in production mode
+}
+
+if (process.env.NODE_ENV === "development") {
+  // We are running in development mode
+}
+
+if (process.env.NODE_ENV === "test") {
+  // We are running in test mode
+}
+```
+
+### Dependencies
+
+When the `NODE_ENV` environment variable is set to 'production' all `devDependencies` in your `package.json` file will be completely ignored when running `npm install`.
+
+You can also enforce this with the `--production` flag:
+
+```bash
+npm install --production
+```
+
+### Setting the `NODE_ENV`
+
+There are several ways that you can use to set the `NODE_ENV` variable.
+
+```bash
+// windows terminal
+set NODE_ENV=production
+
+// linux terminal
+export NODE_ENV=production
+```
+
+### Set `NODE_ENV` For The Current App
+
+This will set `NODE_ENV` for the current app only when executing node with the file specified. This helps when we want to test our apps on different
+environments.
+
+```bash
+# in your terminal
+NODE_ENV=production node app.js
+```
+
+### Using the `cross_env` Package
+
+The `cross_env` package allows you to run scripts that set and use environment variables across platforms while solving inconsistencies that might exist between platforms.
+
+Most Windows command prompts will choke when you set environment variables with `NODE_ENV=production`.
+
+```bash
+# Install the package
+npm install --save-dev cross-env
+```
+
+```json
+// package.json scripts
+"scripts": {
+    "build": "cross-env NODE_ENV=production node env.js",
+    "dev": "cross-env NODE_ENV=development node env.js",
+    "test": "cross-env NODE_ENV=test node env.js"
+}
+```
+
+### Running the App
+
+Once you have created the scripts you will now be able to run each one with the specific `NODE_ENV` value.
+
+```js
+if (process.env.NODE_ENV === "production") {
+  // We are running in production mode
+  console.log(process.env.NODE_ENV);
+}
+
+if (process.env.NODE_ENV === "development") {
+  // We are running in development mode
+  console.log(process.env.NODE_ENV);
+}
+
+if (process.env.NODE_ENV === "test") {
+  // We are running in test mode
+  console.log(process.env.NODE_ENV);
+}
+```
+
+```bash
+$ npm run dev
+development
+```
+
+### Using Different Configurations For Development Production Or Testing With Env Files
+
+You can also use `.env` files to use different configurations for when the app is in development, production or in test mode.
+
+```bash
+# install the dotenv package
+$ npm install dotenv
+```
+
+```js
+// to configure the package as early as possible in your application,
+// require and configure dotenv.
+require("dotenv").config();
+```
+
+### Creating `.env` Files
+
+```bash
+# .env.development
+DB_PATH="development db path"
+SECRET=MY_APP_SECRET_DEVELOPMENT_MODE
+
+# .env.production
+DB_PATH="production db path"
+SECRET=MY_APP_SECRET_PRODUCTION_MODE
+
+# .env.test
+DB_PATH="test db path"
+SECRET=MY_APP_SECRET_TEST_MODE
+```
+
+```bash
+# folder structure
+├── .env.development
+├── .env.production
+├── .env.test
+├── env.files.js
+├── node_modules
+├── package-lock.json
+└── package.json
+```
+
+### Loading `.env` Files
+
+The configuration of the app for the different environments should be stored in different `.env` files.
+
+Then, we can load the files with dotenv by specifying the path to the files depending on the execution environment we are currently in.
+
+```js
+const dotenv = require("dotenv");
+
+dotenv.config({
+  path: `.env.${process.env.NODE_ENV}`,
+});
+```
+
+### Ignoring `.env` Files
+
+It is extremely important that you add the `.env` files to the `.gitignore` file so that api keys and secrets can’t be publicly accessed.
+
+Failing to do so can enable other developers to get your api keys.
+
+```bash
+# .gitignore
+.env
+```
 
 ## Author <!-- omit in toc -->
 
