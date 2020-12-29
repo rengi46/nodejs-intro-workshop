@@ -19,6 +19,7 @@ In this workshop you will learn how to build backend apps with Node.js.
 - [Callbacks and Promises](#callbacks-and-promises)
 - [Error Handling](#error-handling)
 - [Debugging Node.js Apps](#debugging-nodejs-apps)
+- [Servers in Node.js](#servers-in-nodejs)
 
 ## Getting Started
 
@@ -779,6 +780,172 @@ chrome://inspect
 ```
 
 Then, you should see a link to the Node.js inspector.
+
+## Servers in Node.js
+
+### express.js
+
+The simplest way to build a REST server using Node.js is with express.js.
+
+In order to build a server with express and Node.js we need to first install the express package from npm.
+
+```bash
+$ npm install express
+```
+
+### Starting a Server
+
+```js
+// src/utils/servers/server.js
+const express = require("express");
+
+const app = express();
+const db = require("./db");
+
+app.get("/", (req, res) => {
+  res.status(200).send({
+    data: db.User.getUser(),
+  });
+});
+
+app.get("/users", (req, res) => {
+  res.status(200).send({
+    data: db.User.getUsers(),
+  });
+});
+
+module.exports = app;
+```
+
+```js
+// src/utils/servers/index.js
+const app = require("./server");
+const PORT = 4000;
+
+app.listen(PORT, () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
+});
+```
+
+Now, we can start the server using: `nodemon src/utils/servers/index.js`
+
+If everything went fine you should see the following output in the terminal:
+
+```bash
+$ nodemon src/utils/servers
+[nodemon] 1.19.4
+[nodemon] to restart at any time, enter `rs`
+[nodemon] watching dir(s): *.*
+[nodemon] watching extensions: js,mjs,json
+[nodemon] starting `node src/utils/servers`
+Server is running on http://localhost:4000
+```
+
+Then, if we make a request using Postman to the `http://localhost:4000` URL we should get a response similar to the following:
+
+```json
+{
+  "data": {
+    "id": "dbfa38ce-2d51-4d8f-9953-5cf29dc130ce",
+    "firstName": "Damon Zemlak",
+    "lastName": "Reichel",
+    "email": "Fredy_Wehner92@gmail.com"
+  }
+}
+```
+
+### HTTP Verbs
+
+We can easily define a handler for each HTTP Verb using express.
+
+First, we need to use a middleware that can parse the request body and store it as an object in the request object. We can do it using: `app.use(express.json());`.
+
+Then, we can declare the request controllers and by using the `req.params` property we can access the `userId` parameter while all the other data is in the `req.body` property.
+
+```js
+app.use(express.json());
+
+app.patch("/users/:userId", (req, res) => {
+  const { userId } = req.params;
+  const { firstName, lastName } = req.body;
+
+  const user = db.User.updateOne(userId, firstName, lastName);
+
+  res.status(200).send({
+    data: user,
+  });
+});
+
+app.delete("/users/:userId", (req, res) => {
+  const { userId } = req.params;
+
+  const user = db.User.deleteOne(userId);
+
+  res.status(200).send({
+    data: user,
+  });
+});
+```
+
+### Middleware
+
+In express it also very easy to setup middleware functions that will be executed for each request.
+
+We have already seen a middleware function with `app.use(express.json());` but we can also declare our own middleware.
+
+The simplest form of a middleware function is one that takes 3 parameters:
+
+- `req`: the request object
+- `res`: the request object
+- `next`: a function that we need to call to continue the execution
+
+The most important parameter of a middleware is the `next` method which we need to call in order for the request to finish. Otherwise, the request will hang and the client will never receive a response.
+
+```js
+function logger(req, res, next) {
+  console.log("hello from the logger middleware\n");
+  console.log("remember to execute next()");
+
+  next();
+}
+
+app.get("/", logger, (req, res) => {
+  res.status(200).send({
+    data: db.User.getUser(),
+  });
+});
+```
+
+Now if we make a request to the `http://localhost:4000` URL we should see that the `logger` middleware was executed:
+
+```bash
+$ nodemon src/utils/servers/index.js
+[nodemon] 1.19.4
+[nodemon] to restart at any time, enter `rs`
+[nodemon] watching dir(s): *.*
+[nodemon] watching extensions: js,mjs,json
+[nodemon] starting `node src/utils/servers/index.js`
+Server is running on http://localhost:4000
+```
+
+### Practical Uses of Middleware Functions
+
+Middleware functions can be used for any task that we need to intercept and manipulate the request. Uses of middleware include the following:
+
+- authentication & authorization
+- logging
+- analytics
+- etc
+
+### 03-exercise
+
+Open the `index.js` and `server.js` files inside the `src/exercises/03-exercise` folder and solve the exercises by following the instructions. Then, you can check if your solution is correct by running from the terminal the following command:
+
+```bash
+$ npm run test:ex:03
+```
+
+For this part you have 20 minutes to solve it. If you get stuck you can find the solution inside the `03-exercise-solution` branch. Once the time has passed the instructor will solve the exercise.
 
 ## Author <!-- omit in toc -->
 
