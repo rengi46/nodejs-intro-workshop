@@ -2,6 +2,15 @@
  * 1. Import the `BASE_NUM` variable from the `constants.js` file
  *    and use it in the `add()` function to add it to the 2 parameters
  */
+module.exports = {
+    add:function (a,b){
+        const BASE_NUM = require("./constants")
+        return a+b+BASE_NUM
+    },
+    subtract:function (a,b){
+        return a-b
+    }
+}
 
 /**
  * 2. Use module.exports = { ... } to export 2 functions:
